@@ -6,7 +6,7 @@
 #usage		    :
 #notes          :Modules needed via pip install
 #python-version :3.6.4
-#Build command: "C:\Program Files (x86)\Python36-32\Scripts\pyinstaller" "D:\Dokumente\World of Warships\Replay meta reader\WowsReplayTool.py" --onefile
+#Build command: "C:\Program Files (x86)\Python36-32\Scripts\pyinstaller" "D:\Dokumente\_Git\Wows\WowsReplayTool.py" --onefile
 
 import random
 import os

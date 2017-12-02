@@ -28,15 +28,15 @@ parser = argparse.ArgumentParser(
         epilog="")
         
 parser.add_argument('-path', nargs=1, help='Path to replay Folder, default = current_path', default=os.path.dirname(os.path.realpath(__file__))+"/")
-parser.add_argument('--wait',  help='Waits before closing window, defaut = False', action='store_const', const=True, default=False)
+parser.add_argument('--wait',  help='Waits before closing window, default = False', action='store_const', const=True, default=False)
 parser.add_argument('-app_id', nargs=1, help='Wargaming API ID (developers.wargaming.net), default is given', default="23c72eadf6267847fc48a35d03bdb2ef")
 parser.add_argument('-output', nargs=1, help='Path to cvs files, default = binary_path', default=os.path.dirname(os.path.realpath(__file__))+"/")
 parser.add_argument('-prefix', nargs=1, help='Prefix for cvs files, default = None', default="")
-parser.add_argument('--Random', help='Tracks Random Games, defaut = False', action='store_const', const=True, default=False)
-parser.add_argument('--Coop',   help='Tracks Coop Games, defaut = False',   action='store_const', const=True, default=False)
-parser.add_argument('--Ranked', help='Tracks Ranked Games, defaut = False', action='store_const', const=True, default=False)
-parser.add_argument('--CvC',    help='Tracks Clan Games, defaut = False',   action='store_const', const=True, default=False)
-parser.add_argument('--Other',  help='Tracks Event and other Games, defaut = False', action='store_const', const=True, default=False)
+parser.add_argument('--Random', help='Tracks Random Games, default = False', action='store_const', const=True, default=False)
+parser.add_argument('--Coop',   help='Tracks Coop Games, default = False',   action='store_const', const=True, default=False)
+parser.add_argument('--Ranked', help='Tracks Ranked Games, default = False', action='store_const', const=True, default=False)
+parser.add_argument('--CvC',    help='Tracks Clan Games, default = False',   action='store_const', const=True, default=False)
+parser.add_argument('--Other',  help='Tracks Event and other Games, default = False', action='store_const', const=True, default=False)
 
 args = vars(parser.parse_args())
 tracked_gametypes = []

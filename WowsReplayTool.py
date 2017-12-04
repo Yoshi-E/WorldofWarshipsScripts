@@ -1,9 +1,9 @@
 #title          :WowsReplayTool.py
 #description    :This script access world of warship replay data and uses it to generate stats
-#author		    :Yoshi_E
+#author         :Yoshi_E
 #date           :20171129
 #version        :1.0   
-#usage		    :
+#usage          :
 #notes          :Modules needed via pip install
 #python-version :3.6.4
 #Build command: "C:\Program Files (x86)\Python36-32\Scripts\pyinstaller" "D:\Dokumente\_Git\Wows\WowsReplayTool.py" --onefile
@@ -28,10 +28,11 @@ parser = argparse.ArgumentParser(
         epilog="")
         
 parser.add_argument('-path', nargs=1, help='Path to replay Folder, default = current_path', default=os.path.dirname(os.path.realpath(__file__))+"/")
-parser.add_argument('-extract', nargs=1, help='Path to replay file, default = current_path', default="")
+parser.add_argument('-output', nargs=1, help='universal output path, default = binary_path', default=os.path.dirname(os.path.realpath(__file__))+"/")
+parser.add_argument('-extract', nargs=1, help='Path to replay file, Extracts single replay to [output]', default="")
+parser.add_argument('-searchUser', nargs=1, help='Searching for user in replays in [path], outputs result in [output]', default="")
 parser.add_argument('--wait',  help='Waits before closing window, default = False', action='store_const', const=True, default=False)
 parser.add_argument('-app_id', nargs=1, help='Wargaming API ID (developers.wargaming.net), default is given', default="23c72eadf6267847fc48a35d03bdb2ef")
-parser.add_argument('-output', nargs=1, help='universal output path, default = binary_path', default=os.path.dirname(os.path.realpath(__file__))+"/")
 parser.add_argument('-prefix', nargs=1, help='Prefix for cvs files, default = None', default="")
 parser.add_argument('--Random', help='Tracks Random Games, default = False', action='store_const', const=True, default=False)
 parser.add_argument('--Coop',   help='Tracks Coop Games, default = False',   action='store_const', const=True, default=False)
@@ -59,6 +60,7 @@ else:
     default_path = ''.join(args['path'])+"/"
     
 cvs_output = ''.join(args['output'])+"/"
+#isDir
 if(args['prefix'] == ""):
     cvs_prefix = ""
 else:
@@ -69,9 +71,9 @@ shipDB_path = os.path.dirname(sys.executable)
 if("Python" in shipDB_path):
     shipDB_path = os.path.dirname(os.path.realpath(__file__))+"/"
     
-print("Replay path: "+default_path)
-print("CVS path:    "+cvs_output)
-print("ShipDB path: "+shipDB_path)
+print("[path]: "+default_path)
+print("[output]:    "+cvs_output)
+print("Execution Path (ShipDB path): "+shipDB_path)
 if(tracked_gametypes == []):
     print("Notice: No Gamemodes selected! Use -h to see what modes you can track!")
 #dont use '\' here
@@ -178,201 +180,223 @@ def extractReplay(path):
     print("Extracted replay to: "+cvs_output+os.path.basename(path)+".json")
     
  
-if(args['extract'] != ""):
-    extractReplay(''.join(args['extract']))
-    sys.exit()
-#Program stats here :) 
+def statsGenerator():
+    #Ensures you have the information about the ships         
+    replayFiles = getFiles(default_path)    #Gets a List with all replay file paths
+    shipDatabase = loadShipDatbase()        #Loads Database from file
+    currentpath = cvs_output
 
+    #Init Vars
+    counter = {}
+    counter['battles_total'] = 0
+    counter['player_sum'] = 0
+    counter['gamemode'] = {}
+    counter['ByOwnTier'] = {}
+    counter['avrg_tier_sum'] = 0
+    counter['avrg_top_tier_sum'] = 0
+    counter['player_tier_sum'] = 0
+    counter['ship_CV_sum'] = 0
+    counter['ship_DD_sum'] = 0
+    counter['ship_BB_sum'] = 0
+    counter['ship_CA_sum'] = 0
 
-
-askForDatabase()                        #Ensures you have the information about the ships         
-replayFiles = getFiles(default_path)    #Gets a List with all replay file paths
-shipDatabase = loadShipDatbase()        #Loads Database from file
-currentpath = cvs_output
-
-#Init Vars
-counter = {}
-counter['battles_total'] = 0
-counter['player_sum'] = 0
-counter['gamemode'] = {}
-counter['ByOwnTier'] = {}
-counter['avrg_tier_sum'] = 0
-counter['avrg_top_tier_sum'] = 0
-counter['player_tier_sum'] = 0
-counter['ship_CV_sum'] = 0
-counter['ship_DD_sum'] = 0
-counter['ship_BB_sum'] = 0
-counter['ship_CA_sum'] = 0
-
-#Opens a CSV file to store the data in
-with open(currentpath+cvs_prefix+'stats.csv', 'w', newline='') as csvfile:
-    for file in replayFiles:
-        jsonData = loadReplay(default_path+file)
-        #print(file) #prints Current replay file name
-        #Some examples that you could use:
-        #print(jsonData["mapDisplayName"])
-        #print(jsonData["playersPerTeam"])
-        #print(jsonData["vehicles"])
-        #print(len(jsonData["vehicles"]))
-        #print(jsonData["playerVehicle"])
-        #Index = 0 #Index of ship in the team, ranges from 0 to len(jsonData["vehicles"])
-        #ship = str(jsonData["vehicles"][Index]["shipId"])
-        user_tier = 0
-        for ship_data in jsonData["vehicles"]:
-            ship = str(ship_data["shipId"])
-            if(ship in shipDatabase and testTracking(jsonData["scenario"])):
-                if(jsonData["playerName"] == ship_data['name']):
-                    user_tier = shipDatabase[ship]["tier"]
-                    #print(shipDatabase[ship]['name'])
-                    #print(user_tier)
-        if(user_tier not in counter['ByOwnTier']):
-            counter['ByOwnTier'][user_tier] = {}
-            counter['ByOwnTier'][user_tier]['ship_CV_sum'] = 0
-            counter['ByOwnTier'][user_tier]['ship_BB_sum'] = 0
-            counter['ByOwnTier'][user_tier]['ship_CA_sum'] = 0
-            counter['ByOwnTier'][user_tier]['ship_DD_sum'] = 0
-            counter['ByOwnTier'][user_tier]['battles_per_tier'] = 0
-            counter['ByOwnTier'][user_tier]['avrg_team_tier_sum'] = 0
-            #print("reset: " + str(user_tier))
-            
-        counter['ByOwnTier'][user_tier]['battles_per_tier'] += 1
-        #print(counter['ByOwnTier'])
-        
-        
-        top_tier = 0
-        for ship_data in jsonData["vehicles"]:
-            ship = str(ship_data["shipId"])
-            
-            if(ship in shipDatabase and testTracking(jsonData["scenario"])):
-                #############################################
-                counter['avrg_tier_sum'] += shipDatabase[ship]["tier"]
-                counter['player_sum'] += 1
-                if(shipDatabase[ship]["tier"] > top_tier):
-                    top_tier = shipDatabase[ship]["tier"]
-                if(jsonData["playerName"] == ship_data['name']):
-                    counter['player_tier_sum'] += shipDatabase[ship]["tier"] 
-                if(shipDatabase[ship]['type'] == 'AirCarrier'):
-                    counter['ship_CV_sum'] += 1
-                    counter['ByOwnTier'][user_tier]['ship_CV_sum'] += 1
-                if(shipDatabase[ship]['type'] == 'Battleship'):
-                    counter['ship_BB_sum'] += 1    
-                    counter['ByOwnTier'][user_tier]['ship_BB_sum'] += 1
-                if(shipDatabase[ship]['type'] == 'Cruiser'):
-                    counter['ship_CA_sum'] += 1
-                    counter['ByOwnTier'][user_tier]['ship_CA_sum'] += 1
-                if(shipDatabase[ship]['type'] == 'Destroyer'):
-                    counter['ship_DD_sum'] += 1
-                    counter['ByOwnTier'][user_tier]['ship_DD_sum'] += 1
-                counter['ByOwnTier'][user_tier]['avrg_team_tier_sum'] += shipDatabase[ship]["tier"] 
-        
-        #############################################
-        if(testTracking(jsonData["scenario"])):
-            counter['avrg_top_tier_sum'] +=  top_tier
-            counter['battles_total'] += 1
-        if(jsonData["scenario"] in counter['gamemode']):
-            counter['gamemode'][jsonData["scenario"]] += 1
-        else:
-            counter['gamemode'][jsonData["scenario"]] = 1
-        
-        
-    #############################################    
-    #First Block - Overall Info
-    battles_NT_total = 0
-    battles_domination_total =  0
-    battles_standard_total = 0
-    battles_epicenter_total = 0
-    
-
-    for gamemode in counter['gamemode']:
-        if(testTracking(gamemode)):
-            if(gamemode in gamemode_domination):
-                battles_domination_total += counter['gamemode'][gamemode]
-            elif (gamemode in gamemode_standard):
-                battles_standard_total += counter['gamemode'][gamemode]
-            elif (gamemode in gamemode_epicenter):
-                battles_epicenter_total += counter['gamemode'][gamemode]
-            else: 
-                print("Warning unknown Gamemode: "+gamemode)
-        else:
-            battles_NT_total += counter['gamemode'][gamemode]
-    fieldnames = ['battles_total', 'battles_NT_total', 'avrg_tier', 'avrg_players_per_game']
-    csvw = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    csvw.writeheader()
-    csvw.writerow({
-                    'battles_total': counter['battles_total'],
-                    'avrg_tier': calcAvrg(counter['avrg_tier_sum'], counter['player_sum']),   
-                    'avrg_players_per_game': calcAvrg(counter['player_sum'], counter['battles_total']),
-                    'battles_NT_total': battles_NT_total
-                    })   
-    #############################################
-    #Second Block - Helper Vars
-
-    #Second Block - Gamemodes   
-    fieldnames = ['Gametype', 'battles_domination_total', 'battles_standard_total', 'battles_epicenter_total']        
-    csvw = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    csvw.writeheader()
-    csvw.writerow({
-                    'Gametype': ','.join(tracked_gametypes),
-                    'battles_domination_total': battles_domination_total,
-                    'battles_standard_total': battles_standard_total,
-                    'battles_epicenter_total': battles_epicenter_total
-                    })                
-    #############################################                
-    #Third Block - Avrg
-    fieldnames = ['user_tier', 'avrg_toptier', '%CV','%BB','%CA','%DD']
-    csvw = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    csvw.writeheader()
-    csvw.writerow({
-                    'user_tier':    calcAvrg(counter['player_tier_sum'], counter['battles_total']),
-                    'avrg_toptier': calcAvrg(counter['avrg_top_tier_sum'], counter['battles_total']),
-                    '%CV':          calcAvrg(counter['ship_CV_sum'], counter['player_sum']),
-                    '%BB':          calcAvrg(counter['ship_BB_sum'], counter['player_sum']),
-                    '%CA':          calcAvrg(counter['ship_CA_sum'], counter['player_sum']),
-                    '%DD':          calcAvrg(counter['ship_DD_sum'], counter['player_sum'])
-                    }) 
-    #############################################
-    #Forth Block:
-    fieldnames = ['user_tier', 'avrg_team_tier', '%CV','%BB','%CA','%DD','battles_per_tier']
-    csvw = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    csvw.writeheader()
-    for tier in range(1,11):
-        avrg_team_tier = 0
+    #Opens a CSV file to store the data in
+    with open(currentpath+cvs_prefix+'stats.csv', 'w', newline='') as csvfile:
+        for file in replayFiles:
+            jsonData = loadReplay(default_path+file)
+            #print(file) #prints Current replay file name
+            #Some examples that you could use:
+            #print(jsonData["mapDisplayName"])
+            #print(jsonData["playersPerTeam"])
+            #print(jsonData["vehicles"])
+            #print(len(jsonData["vehicles"]))
+            #print(jsonData["playerVehicle"])
+            #Index = 0 #Index of ship in the team, ranges from 0 to len(jsonData["vehicles"])
+            #ship = str(jsonData["vehicles"][Index]["shipId"])
+            user_tier = 0
+            for ship_data in jsonData["vehicles"]:
+                ship = str(ship_data["shipId"])
+                if(ship in shipDatabase and testTracking(jsonData["scenario"])):
+                    if(jsonData["playerName"] == ship_data['name']):
+                        user_tier = shipDatabase[ship]["tier"]
+                        #print(shipDatabase[ship]['name'])
+                        #print(user_tier)
+            if(user_tier not in counter['ByOwnTier']):
+                counter['ByOwnTier'][user_tier] = {}
+                counter['ByOwnTier'][user_tier]['ship_CV_sum'] = 0
+                counter['ByOwnTier'][user_tier]['ship_BB_sum'] = 0
+                counter['ByOwnTier'][user_tier]['ship_CA_sum'] = 0
+                counter['ByOwnTier'][user_tier]['ship_DD_sum'] = 0
+                counter['ByOwnTier'][user_tier]['battles_per_tier'] = 0
+                counter['ByOwnTier'][user_tier]['avrg_team_tier_sum'] = 0
+                #print("reset: " + str(user_tier))
                 
-        if(tier in counter['ByOwnTier']):
-            sum =   (counter['ByOwnTier'][tier]['ship_CV_sum']+
-                 counter['ByOwnTier'][tier]['ship_BB_sum']+ 
-                 counter['ByOwnTier'][tier]['ship_CA_sum']+
-                 counter['ByOwnTier'][tier]['ship_DD_sum'])
-            csvw.writerow({
-                    'user_tier':     tier,
-                    'avrg_team_tier': calcAvrg(counter['ByOwnTier'][tier]['avrg_team_tier_sum'],sum) ,
-                    '%CV':          calcAvrg(counter['ByOwnTier'][tier]['ship_CV_sum'], sum),
-                    '%BB':          calcAvrg(counter['ByOwnTier'][tier]['ship_BB_sum'], sum),
-                    '%CA':          calcAvrg(counter['ByOwnTier'][tier]['ship_CA_sum'], sum),
-                    '%DD':          calcAvrg(counter['ByOwnTier'][tier]['ship_DD_sum'], sum),
-                    'battles_per_tier':  counter['ByOwnTier'][tier]['battles_per_tier']
-                    }) 
-        else:
-            csvw.writerow({
-                    'user_tier':     tier,
-                    'avrg_team_tier': 0,
-                    '%CV':          0,
-                    '%BB':          0,
-                    '%CA':          0,
-                    '%DD':          0,
-                    'battles_per_tier':  0
-                    }) 
-    
-#Opens a CSV file to store the data in
-with open(currentpath+cvs_prefix+'json.csv', 'w', newline='') as csvfile:
-    for file in replayFiles:  
-        jsonData = loadReplay(default_path+file)
-        csvw = csv.DictWriter(csvfile, fieldnames=jsonData.keys())
+            counter['ByOwnTier'][user_tier]['battles_per_tier'] += 1
+            #print(counter['ByOwnTier'])
+            
+            
+            top_tier = 0
+            for ship_data in jsonData["vehicles"]:
+                ship = str(ship_data["shipId"])
+                
+                if(ship in shipDatabase and testTracking(jsonData["scenario"])):
+                    #############################################
+                    counter['avrg_tier_sum'] += shipDatabase[ship]["tier"]
+                    counter['player_sum'] += 1
+                    if(shipDatabase[ship]["tier"] > top_tier):
+                        top_tier = shipDatabase[ship]["tier"]
+                    if(jsonData["playerName"] == ship_data['name']):
+                        counter['player_tier_sum'] += shipDatabase[ship]["tier"] 
+                    if(shipDatabase[ship]['type'] == 'AirCarrier'):
+                        counter['ship_CV_sum'] += 1
+                        counter['ByOwnTier'][user_tier]['ship_CV_sum'] += 1
+                    if(shipDatabase[ship]['type'] == 'Battleship'):
+                        counter['ship_BB_sum'] += 1    
+                        counter['ByOwnTier'][user_tier]['ship_BB_sum'] += 1
+                    if(shipDatabase[ship]['type'] == 'Cruiser'):
+                        counter['ship_CA_sum'] += 1
+                        counter['ByOwnTier'][user_tier]['ship_CA_sum'] += 1
+                    if(shipDatabase[ship]['type'] == 'Destroyer'):
+                        counter['ship_DD_sum'] += 1
+                        counter['ByOwnTier'][user_tier]['ship_DD_sum'] += 1
+                    counter['ByOwnTier'][user_tier]['avrg_team_tier_sum'] += shipDatabase[ship]["tier"] 
+            
+            #############################################
+            if(testTracking(jsonData["scenario"])):
+                counter['avrg_top_tier_sum'] +=  top_tier
+                counter['battles_total'] += 1
+            if(jsonData["scenario"] in counter['gamemode']):
+                counter['gamemode'][jsonData["scenario"]] += 1
+            else:
+                counter['gamemode'][jsonData["scenario"]] = 1
+            
+            
+        #############################################    
+        #First Block - Overall Info
+        battles_NT_total = 0
+        battles_domination_total =  0
+        battles_standard_total = 0
+        battles_epicenter_total = 0
+        
+
+        for gamemode in counter['gamemode']:
+            if(testTracking(gamemode)):
+                if(gamemode in gamemode_domination):
+                    battles_domination_total += counter['gamemode'][gamemode]
+                elif (gamemode in gamemode_standard):
+                    battles_standard_total += counter['gamemode'][gamemode]
+                elif (gamemode in gamemode_epicenter):
+                    battles_epicenter_total += counter['gamemode'][gamemode]
+                else: 
+                    print("Warning unknown Gamemode: "+gamemode)
+            else:
+                battles_NT_total += counter['gamemode'][gamemode]
+        fieldnames = ['battles_total', 'battles_NT_total', 'avrg_tier', 'avrg_players_per_game']
+        csvw = csv.DictWriter(csvfile, fieldnames=fieldnames)
         csvw.writeheader()
-        csvw.writerow(jsonData) 
+        csvw.writerow({
+                        'battles_total': counter['battles_total'],
+                        'avrg_tier': calcAvrg(counter['avrg_tier_sum'], counter['player_sum']),   
+                        'avrg_players_per_game': calcAvrg(counter['player_sum'], counter['battles_total']),
+                        'battles_NT_total': battles_NT_total
+                        })   
+        #############################################
+        #Second Block - Helper Vars
+
+        #Second Block - Gamemodes   
+        fieldnames = ['Gametype', 'battles_domination_total', 'battles_standard_total', 'battles_epicenter_total']        
+        csvw = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        csvw.writeheader()
+        csvw.writerow({
+                        'Gametype': ','.join(tracked_gametypes),
+                        'battles_domination_total': battles_domination_total,
+                        'battles_standard_total': battles_standard_total,
+                        'battles_epicenter_total': battles_epicenter_total
+                        })                
+        #############################################                
+        #Third Block - Avrg
+        fieldnames = ['user_tier', 'avrg_toptier', '%CV','%BB','%CA','%DD']
+        csvw = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        csvw.writeheader()
+        csvw.writerow({
+                        'user_tier':    calcAvrg(counter['player_tier_sum'], counter['battles_total']),
+                        'avrg_toptier': calcAvrg(counter['avrg_top_tier_sum'], counter['battles_total']),
+                        '%CV':          calcAvrg(counter['ship_CV_sum'], counter['player_sum']),
+                        '%BB':          calcAvrg(counter['ship_BB_sum'], counter['player_sum']),
+                        '%CA':          calcAvrg(counter['ship_CA_sum'], counter['player_sum']),
+                        '%DD':          calcAvrg(counter['ship_DD_sum'], counter['player_sum'])
+                        }) 
+        #############################################
+        #Forth Block:
+        fieldnames = ['user_tier', 'avrg_team_tier', '%CV','%BB','%CA','%DD','battles_per_tier']
+        csvw = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        csvw.writeheader()
+        for tier in range(1,11):
+            avrg_team_tier = 0
+                    
+            if(tier in counter['ByOwnTier']):
+                sum =   (counter['ByOwnTier'][tier]['ship_CV_sum']+
+                     counter['ByOwnTier'][tier]['ship_BB_sum']+ 
+                     counter['ByOwnTier'][tier]['ship_CA_sum']+
+                     counter['ByOwnTier'][tier]['ship_DD_sum'])
+                csvw.writerow({
+                        'user_tier':     tier,
+                        'avrg_team_tier': calcAvrg(counter['ByOwnTier'][tier]['avrg_team_tier_sum'],sum) ,
+                        '%CV':          calcAvrg(counter['ByOwnTier'][tier]['ship_CV_sum'], sum),
+                        '%BB':          calcAvrg(counter['ByOwnTier'][tier]['ship_BB_sum'], sum),
+                        '%CA':          calcAvrg(counter['ByOwnTier'][tier]['ship_CA_sum'], sum),
+                        '%DD':          calcAvrg(counter['ByOwnTier'][tier]['ship_DD_sum'], sum),
+                        'battles_per_tier':  counter['ByOwnTier'][tier]['battles_per_tier']
+                        }) 
+            else:
+                csvw.writerow({
+                        'user_tier':     tier,
+                        'avrg_team_tier': 0,
+                        '%CV':          0,
+                        '%BB':          0,
+                        '%CA':          0,
+                        '%DD':          0,
+                        'battles_per_tier':  0
+                        }) 
+        
+    #Opens a CSV file to store the data in
+    with open(currentpath+cvs_prefix+'json.csv', 'w', newline='') as csvfile:
+        for file in replayFiles:  
+            jsonData = loadReplay(default_path+file)
+            csvw = csv.DictWriter(csvfile, fieldnames=jsonData.keys())
+            csvw.writeheader()
+            csvw.writerow(jsonData) 
+        
+    if(counter['battles_total'] ==0):
+        print("Warning: No replays found in: "+default_path)
+    print("Done! Data Stored in .csv files")
+     
+     
+def searchUser(User):
+    replayFiles = getFiles(default_path)
+    print("Searching for: "+User)
+    with open(cvs_output+User+'.txt', 'a') as resultFile:
+        for file in replayFiles:
+            jsonData = loadReplay(default_path+file)
+            for ship_data in jsonData["vehicles"]:
+                if(str(User) in str(ship_data["name"])):
+                    resultFile.write(file+'\n')
+                    print("Found in: "+file)
+ 
+
+print("------------------------------------------------------------------------")
+if(args['extract'] != ""):
+    #isfile
+    extractReplay(''.join(args['extract']))
+
+elif(args['searchUser'] != ""):
+    searchUser(''.join(args['searchUser']))
+else:
+    askForDatabase()  #ensures a Database is present 
+    statsGenerator()
+
     
-if(counter['battles_total'] ==0):
-    print("Warning: No replays found in: "+default_path)
-print("Done! Data Stored in .csv files")
+
+
 if(wait_before_closing==True):
     input("Press Enter to continue...")

@@ -58,14 +58,24 @@ if(args['path'][:-1] == "/" or args['path'][:-1] == "\\"):
     default_path = ''.join(args['path'])
 else: 
     default_path = ''.join(args['path'])+"/"
+
+if(os.path.exists(default_path)==False or os.path.isdir(default_path) == False):
+    print("Failed to find path: "+default_path)
+    sys.exit()
     
-cvs_output = ''.join(args['output'])+"/"
-#isDir
+if(os.path.exists(''.join(args['output']))==True and os.path.isdir(''.join(args['output'])) == True):
+    cvs_output = ''.join(args['output'])+"/"
+else:
+    print("Failed to find path: "+cvs_output)
+    sys.exit()
+    
+
 if(args['prefix'] == ""):
     cvs_prefix = ""
 else:
     cvs_prefix = ''.join(args['prefix']).replace("/","").replace("\\","")
 wait_before_closing = args['wait']
+
 shipDB_path = os.path.dirname(sys.executable)
 #If In script:
 if("Python" in shipDB_path):
@@ -366,9 +376,6 @@ def statsGenerator():
             csvw = csv.DictWriter(csvfile, fieldnames=jsonData.keys())
             csvw.writeheader()
             csvw.writerow(jsonData) 
-        
-    if(counter['battles_total'] ==0):
-        print("Warning: No replays found in: "+default_path)
     print("Done! Data Stored in .csv files")
      
      
@@ -386,9 +393,11 @@ def searchUser(User):
 
 print("------------------------------------------------------------------------")
 if(args['extract'] != ""):
-    #isfile
-    extractReplay(''.join(args['extract']))
-
+    tempPath = ''.join(args['extract'])
+    if(os.path.exists(tempPath)==True and os.path.isFile(tempPath) == True):
+         extractReplay(tempPath)
+    else:
+        print("Replay not found at: "+tempPath)     
 elif(args['searchUser'] != ""):
     searchUser(''.join(args['searchUser']))
 else:

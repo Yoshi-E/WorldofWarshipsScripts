@@ -17,6 +17,7 @@ import requests
 import csv
 import sys
 import argparse
+import pickle
 from os import listdir
 from os.path import isfile, join
 
@@ -39,6 +40,7 @@ parser.add_argument('--Coop',   help='Tracks Coop Games, default = False',   act
 parser.add_argument('--Ranked', help='Tracks Ranked Games, default = False', action='store_const', const=True, default=False)
 parser.add_argument('--CvC',    help='Tracks Clan Games, default = False',   action='store_const', const=True, default=False)
 parser.add_argument('--Other',  help='Tracks Event and other Games, default = False', action='store_const', const=True, default=False)
+parser.add_argument('--TEST',  help='Debuging tool', action='store_const', const=True, default=False)
 
 args = vars(parser.parse_args())
 tracked_gametypes = []
@@ -86,6 +88,7 @@ print("[output]:    "+cvs_output)
 print("Execution Path (ShipDB path): "+shipDB_path)
 if(tracked_gametypes == []):
     print("Notice: No Gamemodes selected! Use -h to see what modes you can track!")
+
 #dont use '\' here
 #default_path = "C:/Program Files/WOWS/replays/"
 #application_id = ""     #Application_id from https://developers.wargaming.net/ is needed here
@@ -113,13 +116,18 @@ def getFileExtension(path):
     return file_extension
 
 #Loads a replay file from given path and retuns its Json meta data
+#Returns false if loading failed
 def loadReplay(path):
     #Reads file and outputs the first line with readable chars, containing the metadata of the replay
     raw_metadata = ""
+    safty=0
     with io.open(path,'r',encoding='ascii',errors='ignore') as infile:
-        while ("clientVersionFromXml" not in raw_metadata):
+        while (safty<10 and "clientVersionFromXml" not in raw_metadata):
             raw_metadata = infile.readline()
-    
+            safty += 1
+    if(safty>=10):
+        print("ERROR failed to load replay: "+path)
+        return False;
     printable = set(string.printable)
     raw_metadata = ''.join(filter(lambda x: x in printable, raw_metadata))  #Filters non Ascii chars and Binary Data from string
     #Cuts faulty data from the json
@@ -185,9 +193,10 @@ def calcAvrg(A,B):
         
 def extractReplay(path):
     jsonData = loadReplay(path)
-    with open(cvs_output+os.path.basename(path)+".json", "w") as outfile:
-        json.dump(jsonData, outfile)
-    print("Extracted replay to: "+cvs_output+os.path.basename(path)+".json")
+    if(jsonData != False):
+        with open(cvs_output+os.path.basename(path)+".json", "w") as outfile:
+            json.dump(jsonData, outfile)
+        print("Extracted replay to: "+cvs_output+os.path.basename(path)+".json")
     
  
 def statsGenerator():
@@ -214,71 +223,72 @@ def statsGenerator():
     with open(currentpath+cvs_prefix+'stats.csv', 'w', newline='') as csvfile:
         for file in replayFiles:
             jsonData = loadReplay(default_path+file)
-            #print(file) #prints Current replay file name
-            #Some examples that you could use:
-            #print(jsonData["mapDisplayName"])
-            #print(jsonData["playersPerTeam"])
-            #print(jsonData["vehicles"])
-            #print(len(jsonData["vehicles"]))
-            #print(jsonData["playerVehicle"])
-            #Index = 0 #Index of ship in the team, ranges from 0 to len(jsonData["vehicles"])
-            #ship = str(jsonData["vehicles"][Index]["shipId"])
-            user_tier = 0
-            for ship_data in jsonData["vehicles"]:
-                ship = str(ship_data["shipId"])
-                if(ship in shipDatabase and testTracking(jsonData["scenario"])):
-                    if(jsonData["playerName"] == ship_data['name']):
-                        user_tier = shipDatabase[ship]["tier"]
-                        #print(shipDatabase[ship]['name'])
-                        #print(user_tier)
-            if(user_tier not in counter['ByOwnTier']):
-                counter['ByOwnTier'][user_tier] = {}
-                counter['ByOwnTier'][user_tier]['ship_CV_sum'] = 0
-                counter['ByOwnTier'][user_tier]['ship_BB_sum'] = 0
-                counter['ByOwnTier'][user_tier]['ship_CA_sum'] = 0
-                counter['ByOwnTier'][user_tier]['ship_DD_sum'] = 0
-                counter['ByOwnTier'][user_tier]['battles_per_tier'] = 0
-                counter['ByOwnTier'][user_tier]['avrg_team_tier_sum'] = 0
-                #print("reset: " + str(user_tier))
+            if(jsonData != False):
+                #print(file) #prints Current replay file name
+                #Some examples that you could use:
+                #print(jsonData["mapDisplayName"])
+                #print(jsonData["playersPerTeam"])
+                #print(jsonData["vehicles"])
+                #print(len(jsonData["vehicles"]))
+                #print(jsonData["playerVehicle"])
+                #Index = 0 #Index of ship in the team, ranges from 0 to len(jsonData["vehicles"])
+                #ship = str(jsonData["vehicles"][Index]["shipId"])
+                user_tier = 0
+                for ship_data in jsonData["vehicles"]:
+                    ship = str(ship_data["shipId"])
+                    if(ship in shipDatabase and testTracking(jsonData["scenario"])):
+                        if(jsonData["playerName"] == ship_data['name']):
+                            user_tier = shipDatabase[ship]["tier"]
+                            #print(shipDatabase[ship]['name'])
+                            #print(user_tier)
+                if(user_tier not in counter['ByOwnTier']):
+                    counter['ByOwnTier'][user_tier] = {}
+                    counter['ByOwnTier'][user_tier]['ship_CV_sum'] = 0
+                    counter['ByOwnTier'][user_tier]['ship_BB_sum'] = 0
+                    counter['ByOwnTier'][user_tier]['ship_CA_sum'] = 0
+                    counter['ByOwnTier'][user_tier]['ship_DD_sum'] = 0
+                    counter['ByOwnTier'][user_tier]['battles_per_tier'] = 0
+                    counter['ByOwnTier'][user_tier]['avrg_team_tier_sum'] = 0
+                    #print("reset: " + str(user_tier))
+                    
+                counter['ByOwnTier'][user_tier]['battles_per_tier'] += 1
+                #print(counter['ByOwnTier'])
                 
-            counter['ByOwnTier'][user_tier]['battles_per_tier'] += 1
-            #print(counter['ByOwnTier'])
-            
-            
-            top_tier = 0
-            for ship_data in jsonData["vehicles"]:
-                ship = str(ship_data["shipId"])
                 
-                if(ship in shipDatabase and testTracking(jsonData["scenario"])):
-                    #############################################
-                    counter['avrg_tier_sum'] += shipDatabase[ship]["tier"]
-                    counter['player_sum'] += 1
-                    if(shipDatabase[ship]["tier"] > top_tier):
-                        top_tier = shipDatabase[ship]["tier"]
-                    if(jsonData["playerName"] == ship_data['name']):
-                        counter['player_tier_sum'] += shipDatabase[ship]["tier"] 
-                    if(shipDatabase[ship]['type'] == 'AirCarrier'):
-                        counter['ship_CV_sum'] += 1
-                        counter['ByOwnTier'][user_tier]['ship_CV_sum'] += 1
-                    if(shipDatabase[ship]['type'] == 'Battleship'):
-                        counter['ship_BB_sum'] += 1    
-                        counter['ByOwnTier'][user_tier]['ship_BB_sum'] += 1
-                    if(shipDatabase[ship]['type'] == 'Cruiser'):
-                        counter['ship_CA_sum'] += 1
-                        counter['ByOwnTier'][user_tier]['ship_CA_sum'] += 1
-                    if(shipDatabase[ship]['type'] == 'Destroyer'):
-                        counter['ship_DD_sum'] += 1
-                        counter['ByOwnTier'][user_tier]['ship_DD_sum'] += 1
-                    counter['ByOwnTier'][user_tier]['avrg_team_tier_sum'] += shipDatabase[ship]["tier"] 
-            
-            #############################################
-            if(testTracking(jsonData["scenario"])):
-                counter['avrg_top_tier_sum'] +=  top_tier
-                counter['battles_total'] += 1
-            if(jsonData["scenario"] in counter['gamemode']):
-                counter['gamemode'][jsonData["scenario"]] += 1
-            else:
-                counter['gamemode'][jsonData["scenario"]] = 1
+                top_tier = 0
+                for ship_data in jsonData["vehicles"]:
+                    ship = str(ship_data["shipId"])
+                    
+                    if(ship in shipDatabase and testTracking(jsonData["scenario"])):
+                        #############################################
+                        counter['avrg_tier_sum'] += shipDatabase[ship]["tier"]
+                        counter['player_sum'] += 1
+                        if(shipDatabase[ship]["tier"] > top_tier):
+                            top_tier = shipDatabase[ship]["tier"]
+                        if(jsonData["playerName"] == ship_data['name']):
+                            counter['player_tier_sum'] += shipDatabase[ship]["tier"] 
+                        if(shipDatabase[ship]['type'] == 'AirCarrier'):
+                            counter['ship_CV_sum'] += 1
+                            counter['ByOwnTier'][user_tier]['ship_CV_sum'] += 1
+                        if(shipDatabase[ship]['type'] == 'Battleship'):
+                            counter['ship_BB_sum'] += 1    
+                            counter['ByOwnTier'][user_tier]['ship_BB_sum'] += 1
+                        if(shipDatabase[ship]['type'] == 'Cruiser'):
+                            counter['ship_CA_sum'] += 1
+                            counter['ByOwnTier'][user_tier]['ship_CA_sum'] += 1
+                        if(shipDatabase[ship]['type'] == 'Destroyer'):
+                            counter['ship_DD_sum'] += 1
+                            counter['ByOwnTier'][user_tier]['ship_DD_sum'] += 1
+                        counter['ByOwnTier'][user_tier]['avrg_team_tier_sum'] += shipDatabase[ship]["tier"] 
+                
+                #############################################
+                if(testTracking(jsonData["scenario"])):
+                    counter['avrg_top_tier_sum'] +=  top_tier
+                    counter['battles_total'] += 1
+                if(jsonData["scenario"] in counter['gamemode']):
+                    counter['gamemode'][jsonData["scenario"]] += 1
+                else:
+                    counter['gamemode'][jsonData["scenario"]] = 1
             
             
         #############################################    
@@ -373,9 +383,10 @@ def statsGenerator():
     with open(currentpath+cvs_prefix+'json.csv', 'w', newline='') as csvfile:
         for file in replayFiles:  
             jsonData = loadReplay(default_path+file)
-            csvw = csv.DictWriter(csvfile, fieldnames=jsonData.keys())
-            csvw.writeheader()
-            csvw.writerow(jsonData) 
+            if(jsonData != False):
+                csvw = csv.DictWriter(csvfile, fieldnames=jsonData.keys())
+                csvw.writeheader()
+                csvw.writerow(jsonData) 
     print("Done! Data Stored in .csv files")
      
      
@@ -385,11 +396,15 @@ def searchUser(User):
     with open(cvs_output+User+'.txt', 'a') as resultFile:
         for file in replayFiles:
             jsonData = loadReplay(default_path+file)
-            for ship_data in jsonData["vehicles"]:
-                if(str(User) in str(ship_data["name"])):
-                    resultFile.write(file+'\n')
-                    print("Found in: "+file)
- 
+            if(jsonData != False):
+                for ship_data in jsonData["vehicles"]:
+                    if(str(User) in str(ship_data["name"])):
+                        resultFile.write(file+" "+ship_data["name"]+'\n')
+                        print("Found '"+str(ship_data["name"])+"' in: "+file)
+def test():
+    with open('C:/Program Files/WOWS/replays/20170920_183558_PBSB517-Nelson_42_Neighbors.wowsreplay', 'rb') as pickle_file:
+        content = pickle.load(pickle_file)
+#    print(pickle.load("C:\Program Files\WOWS\replays\20170920_183558_PBSB517-Nelson_42_Neighbors.wowsreplay"))
 
 print("------------------------------------------------------------------------")
 if(args['extract'] != ""):
@@ -400,6 +415,8 @@ if(args['extract'] != ""):
         print("Replay not found at: "+tempPath)     
 elif(args['searchUser'] != ""):
     searchUser(''.join(args['searchUser']))
+elif(args['TEST'] == True):
+    test()
 else:
     askForDatabase()  #ensures a Database is present 
     statsGenerator()

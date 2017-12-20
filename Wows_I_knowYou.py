@@ -213,7 +213,7 @@ def detectCurrentGame():
                     delta = b - a
                     days = str(delta.days)
                     
-                    days = days + " " * (3-int(days))
+                    days = days + " " * (3-len(days))
                     last_met_data = userData[username][last_met_time]
                     last_met_shipid = userData[username][last_met_time]["shipId"]
                     

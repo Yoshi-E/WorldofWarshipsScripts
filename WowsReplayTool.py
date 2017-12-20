@@ -78,6 +78,7 @@ else:
     cvs_prefix = ''.join(args['prefix']).replace("/","").replace("\\","")
 wait_before_closing = args['wait']
 
+#os.getcwd() or this?
 shipDB_path = os.path.dirname(sys.executable)
 #If In script:
 if("Python" in shipDB_path):

@@ -25,16 +25,20 @@ import configparser
 from os import listdir
 from os.path import isfile, join
 from datetime import datetime
+line = "------------------------------------------------------------------------"
 
+print(line)
 print ("World of Warships replay metadata reader - Yoshi_E 2017")
+print(line)
 
 config = configparser.ConfigParser()
 
-base_path = os.path.dirname(sys.executable) #os.getcwd() or this?
+base_path = os.path.dirname(sys.executable)+"/" #os.getcwd() or this?
 #If In script:
 if("Python" in base_path):
     base_path = os.path.dirname(os.path.realpath(__file__))+"/"
     
+base_path = base_path.replace("//", "/")
 
 if(os.path.isfile(base_path+"config.ini")==False):
     path = input("Enter path to replays: ")+"/".replace("//", "/")
@@ -209,6 +213,7 @@ def detectCurrentGame():
                     delta = b - a
                     days = str(delta.days)
                     
+                    days = days + " " * (3-int(days))
                     last_met_data = userData[username][last_met_time]
                     last_met_shipid = userData[username][last_met_time]["shipId"]
                     
@@ -216,23 +221,23 @@ def detectCurrentGame():
                     map_name    = last_met_data["mapName"] + " " * (30-len(last_met_data["mapName"]))
                     met_num_t   = str(met_num) + " " * (4-len(str(met_num)))
                     if(last_met_shipid in shipDB):
-                        print(username_t+" Played "+met_num_t+" Days: "+days+ " at "+map_name+"Last Ship: "+shipDB[last_met_shipid]["name"])
+                        print(username_t+" Played "+met_num_t+" Days: "+days+" at "+map_name+"Last Ship: "+shipDB[last_met_shipid]["name"])
                     else:
                         print(username_t+" Played "+met_num_t+" day since last battle: "+days+ " at "+map_name)
                         
-                    userData = generateUserDBJson() # This is very ineffective, as it checks all replays all over again
-            print("------------------------------------------------------------------------")
+            userData = generateUserDBJson() # This is very ineffective, as it checks all replays all over again
+            print(line)
         time.sleep(refreshRate)
 
 
-print("------------------------------------------------------------------------")
+print(line)
 
 askForDatabase()  #ensures a Database is present 
 userData = generateUserDBJson()
 print("Found "+str(len(getFiles(default_path)))+" replays")
 print("User List Updated")
 print("Attempting to detect current game...")
-print("------------------------------------------------------------------------")
+print(line)
 detectCurrentGame()
 
 

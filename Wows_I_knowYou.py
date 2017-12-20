@@ -6,7 +6,7 @@
 #usage          :
 #notes          :Modules needed via pip install
 #python-version :3.6.4
-#Build command: "C:\Program Files (x86)\Python36-32\Scripts\pyinstaller" "D:\Dokumente\_Git\Wows\WowsReplayTool.py" --onefile
+#Build command: "C:\Program Files (x86)\Python36-32\Scripts\pyinstaller" "D:\Dokumente\_Git\Wows\Wows_I_knowYou.py" --onefile
 
 import random
 import os
@@ -21,41 +21,48 @@ import pickle
 from collections import OrderedDict
 import time
 import math
+import configparser
 from os import listdir
 from os.path import isfile, join
 from datetime import datetime
 
 print ("World of Warships replay metadata reader - Yoshi_E 2017")
 
+config = configparser.ConfigParser()
 
-parser = argparse.ArgumentParser(
-        description='Reads All replays in current folder an generates stats for them',
-        epilog="")
- 
-parser.add_argument('-path', nargs=1, help='Path to replay Folder, default = current_path', default=os.path.dirname(os.path.realpath(__file__))+"/")
-parser.add_argument('-app_id', nargs=1, help='Wargaming API ID (developers.wargaming.net), default is given', default="23c72eadf6267847fc48a35d03bdb2ef")
-#parser.add_argument('--wait',  help='Waits before closing window, default = False', action='store_const', const=True, default=False)
-
-args = vars(parser.parse_args())
-
-application_id = ''.join(args['app_id'])
-if(args['path'][:-1] == "/" or args['path'][:-1] == "\\"):
-    default_path = ''.join(args['path'])
-else: 
-    default_path = ''.join(args['path'])+"/"
-
-if(os.path.exists(default_path)==False or os.path.isdir(default_path) == False):
-    print("Failed to find path: "+default_path)
-    sys.exit()
-
-default_path = "C:/Program Files/WOWS/replays/"
-#os.getcwd() or this?
-base_path = os.path.dirname(sys.executable)
-
+base_path = os.path.dirname(sys.executable) #os.getcwd() or this?
 #If In script:
 if("Python" in base_path):
     base_path = os.path.dirname(os.path.realpath(__file__))+"/"
     
+
+if(os.path.isfile(base_path+"config.ini")==False):
+    path = input("Enter path to replays: ")+"/".replace("//", "/")
+
+    config['DEFAULT'] = {       'path': path,
+                                'refreshRate': '10',
+                                'application_id': "23c72eadf6267847fc48a35d03bdb2ef"}
+
+                            
+    with open(base_path+'config.ini', 'w') as configfile:
+        config.write(configfile)
+                            
+else: 
+    config.read(base_path+'config.ini')
+
+
+default_path = config['DEFAULT']['path']
+refreshRate = int(config['DEFAULT']['refreshRate'])
+application_id = config['DEFAULT']['application_id']          
+            
+if(os.path.exists(default_path)==False or os.path.isdir(default_path) == False):
+    print("Failed to find path: "+default_path)
+    sys.exit()
+
+
+
+
+
 print("[path]: "+default_path)
 print("[database]: "+base_path)
 
@@ -215,13 +222,14 @@ def detectCurrentGame():
                         
                     userData = generateUserDBJson() # This is very ineffective, as it checks all replays all over again
             print("------------------------------------------------------------------------")
-        time.sleep(10)
+        time.sleep(refreshRate)
 
 
 print("------------------------------------------------------------------------")
 
 askForDatabase()  #ensures a Database is present 
 userData = generateUserDBJson()
+print("Found "+str(len(getFiles(default_path)))+" replays")
 print("User List Updated")
 print("Attempting to detect current game...")
 print("------------------------------------------------------------------------")

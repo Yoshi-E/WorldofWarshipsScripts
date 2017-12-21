@@ -6,7 +6,7 @@
 #usage          :
 #notes          :Modules needed via pip install
 #python-version :3.6.4
-#Build command: "C:\Program Files (x86)\Python36-32\Scripts\pyinstaller" "D:\Dokumente\_Git\Wows\Wows_I_knowYou.py" --onefile
+#Build command: "C:\Program Files (x86)\Python36-32\Scripts\pyinstaller" "D:\Dokumente\_Git\Wows\Wows_I_knowYou.py" --onefile --icon=wows.ico
 
 import random
 import os
@@ -192,7 +192,7 @@ def detectCurrentGame():
             
         if(lastgame < newgame):
             lastgame = newgame
-            print(jsonData["dateTime"]+" "+jsonData["mapName"]+":")
+            print(jsonData["dateTime"]+" "+jsonData["mapName"].replace("spaces/","")+":")
             
             for ship_data in jsonData["vehicles"]:
                 shipId =    str(ship_data["shipId"])
@@ -218,7 +218,7 @@ def detectCurrentGame():
                     last_met_shipid = userData[username][last_met_time]["shipId"]
                     
                     username_t  = username + " " * (24-len(username))
-                    map_name    = last_met_data["mapName"] + " " * (30-len(last_met_data["mapName"]))
+                    map_name    = (last_met_data["mapName"] + " " * (30-len(last_met_data["mapName"]))).replace("spaces/","")
                     met_num_t   = str(met_num) + " " * (4-len(str(met_num)))
                     if(last_met_shipid in shipDB):
                         print(username_t+" Played "+met_num_t+" Days: "+days+" at "+map_name+"Last Ship: "+shipDB[last_met_shipid]["name"])

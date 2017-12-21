@@ -191,8 +191,11 @@ def detectCurrentGame():
             newgame = jsonData["dateTime"]
             
         if(lastgame < newgame):
-            lastgame = newgame
-            print(jsonData["dateTime"]+" "+jsonData["mapName"].replace("spaces/","")+":")
+            lastgame    = newgame
+            timestamp   = jsonData["dateTime"]
+            mapName     = jsonData["mapName"]
+            logic       = jsonData["logic"]
+            print(timestamp+" "+mapName.replace("spaces/","")+":")
             
             for ship_data in jsonData["vehicles"]:
                 shipId =    str(ship_data["shipId"])
@@ -224,8 +227,16 @@ def detectCurrentGame():
                         print(username_t+" Played "+met_num_t+" Days: "+days+" at "+map_name+"Last Ship: "+shipDB[last_met_shipid]["name"])
                     else:
                         print(username_t+" Played "+met_num_t+" day since last battle: "+days+ " at "+map_name)
+                userData[username][timestamp]["mapName"]    = mapName
+                userData[username][timestamp]["logic"]      = logic
+                userData[username][timestamp]["shipId"]     = shipId
+                userData[username][timestamp]["userId"]     = userId
+            
+            #Save UserData  to Disk       
+            with open(base_path + "/userDatabase.json", "w") as outfile:
+                json.dump(userData, outfile)       
                         
-            userData = generateUserDBJson() # This is very ineffective, as it checks all replays all over again
+           # userData = generateUserDBJson() # This is very ineffective, as it checks all replays all over again
             print(line)
         time.sleep(refreshRate)
 

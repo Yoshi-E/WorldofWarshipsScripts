@@ -149,12 +149,18 @@ def generateUserDBJson():
         data = {}
     else:
         data = json.load(io.open(base_path+"/userDatabase.json","r", encoding="utf8",errors='ignore'))
+    if(os.path.isfile(base_path+"/replayDatabase.json")==False):
+        replayData = {}
+    else:
+        replayData = json.load(io.open(base_path+"/replayDatabase.json","r", encoding="utf8",errors='ignore'))
         
-        
+    print(len(replayData))  
     replayFiles = getFiles(default_path)
     for file in replayFiles:
             jsonData = loadReplay(default_path+file)
             if(jsonData != False): #Skips faulty replays
+                replayData[jsonData["dateTime"]] = {}
+                replayData[jsonData["dateTime"]] = jsonData
                 timestamp   = jsonData["dateTime"]
                 mapName     = jsonData["mapName"]
                 logic       = jsonData["logic"]
@@ -177,6 +183,8 @@ def generateUserDBJson():
 
     with open(base_path + "/userDatabase.json", "w") as outfile:
         json.dump(data, outfile)       #Writes Json Object to disk
+    with open(base_path + "/replayDatabase.json", "w") as outfile:
+        json.dump(replayData, outfile)       #Writes Json Object to disk
     return data
         
 def detectCurrentGame():
@@ -227,10 +235,15 @@ def detectCurrentGame():
                         print(username_t+" Played "+met_num_t+" Days: "+days+" at "+map_name+"Last Ship: "+shipDB[last_met_shipid]["name"])
                     else:
                         print(username_t+" Played "+met_num_t+" day since last battle: "+days+ " at "+map_name)
-                userData[username][timestamp]["mapName"]    = mapName
-                userData[username][timestamp]["logic"]      = logic
-                userData[username][timestamp]["shipId"]     = shipId
-                userData[username][timestamp]["userId"]     = userId
+                else:
+                    if(jsonData["playerName"] != username):
+                        userData[username] = {}
+                        if(timestamp not in userData[username]):
+                            userData[username][timestamp] = {}
+                        userData[username][timestamp]["mapName"]    = mapName
+                        userData[username][timestamp]["logic"]      = logic
+                        userData[username][timestamp]["shipId"]     = shipId
+                        userData[username][timestamp]["userId"]     = userId
             
             #Save UserData  to Disk       
             with open(base_path + "/userDatabase.json", "w") as outfile:

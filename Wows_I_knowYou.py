@@ -143,7 +143,24 @@ def askForDatabase():
 #Loads Ship database from disk
 def loadShipDatbase():
     return json.load(io.open(base_path+"/shipDatabase.json","r", encoding="utf8",errors='ignore'))
+    
+    
+def addToDatabase(data, newdata, ship_data):
+    username = ship_data["name"]
+    if(newdata["playerName"] != ship_data["name"]):
+        timestamp = newdata["dateTime"]
+        if(username not in data):
+            data[username] = {}
+        if(timestamp not in data[username]):
+            data[username][timestamp] = {}
 
+        data[username][timestamp]["mapName"]    = newdata["mapName"]
+        data[username][timestamp]["logic"]      = newdata["logic"]
+        data[username][timestamp]["shipId"]     = ship_data["shipId"]
+        data[username][timestamp]["userId"]     = ship_data["id"]
+    return data
+    
+    
 def generateUserDBJson():
     if(os.path.isfile(base_path+"/userDatabase.json")==False):
         data = {}
@@ -153,33 +170,15 @@ def generateUserDBJson():
         replayData = {}
     else:
         replayData = json.load(io.open(base_path+"/replayDatabase.json","r", encoding="utf8",errors='ignore'))
-        
-    print(len(replayData))  
     replayFiles = getFiles(default_path)
     for file in replayFiles:
             jsonData = loadReplay(default_path+file)
             if(jsonData != False): #Skips faulty replays
                 replayData[jsonData["dateTime"]] = {}
                 replayData[jsonData["dateTime"]] = jsonData
-                timestamp   = jsonData["dateTime"]
-                mapName     = jsonData["mapName"]
-                logic       = jsonData["logic"]
                 
                 for ship_data in jsonData["vehicles"]: #For all players (vehicles) in game do:
-                
-                    shipId =      str(ship_data["shipId"])
-                    relation =  str(ship_data["relation"])
-                    username =  str(ship_data["name"])
-                    userId =    str(ship_data["id"])
-                    if(jsonData["playerName"] != ship_data["name"]):
-                        if(username not in data):
-                            data[username] = {}
-                        if(timestamp not in data[username]):
-                            data[username][timestamp] = {}
-                        data[username][timestamp]["mapName"]    = mapName
-                        data[username][timestamp]["logic"]      = logic
-                        data[username][timestamp]["shipId"]     = shipId
-                        data[username][timestamp]["userId"]     = userId
+                    data = addToDatabase(data, jsonData, ship_data)
 
     with open(base_path + "/userDatabase.json", "w") as outfile:
         json.dump(data, outfile)       #Writes Json Object to disk
@@ -226,24 +225,18 @@ def detectCurrentGame():
                     
                     days = days + " " * (3-len(days))
                     last_met_data = userData[username][last_met_time]
-                    last_met_shipid = userData[username][last_met_time]["shipId"]
+                    last_met_shipid = str(userData[username][last_met_time]["shipId"])
                     
                     username_t  = username + " " * (24-len(username))
                     map_name    = (last_met_data["mapName"] + " " * (30-len(last_met_data["mapName"]))).replace("spaces/","")
                     met_num_t   = str(met_num) + " " * (4-len(str(met_num)))
+                    #print(shipDB["4293834736"])
                     if(last_met_shipid in shipDB):
                         print(username_t+" Played "+met_num_t+" Days: "+days+" at "+map_name+"Last Ship: "+shipDB[last_met_shipid]["name"])
                     else:
                         print(username_t+" Played "+met_num_t+" day since last battle: "+days+ " at "+map_name)
                 else:
-                    if(jsonData["playerName"] != username):
-                        userData[username] = {}
-                        if(timestamp not in userData[username]):
-                            userData[username][timestamp] = {}
-                        userData[username][timestamp]["mapName"]    = mapName
-                        userData[username][timestamp]["logic"]      = logic
-                        userData[username][timestamp]["shipId"]     = shipId
-                        userData[username][timestamp]["userId"]     = userId
+                    userData = addToDatabase(userData, jsonData, ship_data)
             
             #Save UserData  to Disk       
             with open(base_path + "/userDatabase.json", "w") as outfile:

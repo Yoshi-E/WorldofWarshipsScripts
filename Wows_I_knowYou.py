@@ -153,11 +153,13 @@ def addToDatabase(data, newdata, ship_data):
             data[username] = {}
         if(timestamp not in data[username]):
             data[username][timestamp] = {}
-
+        
         data[username][timestamp]["mapName"]    = newdata["mapName"]
         data[username][timestamp]["logic"]      = newdata["logic"]
         data[username][timestamp]["shipId"]     = ship_data["shipId"]
         data[username][timestamp]["userId"]     = ship_data["id"]
+        data[username][timestamp]["relation"]   = ship_data["relation"]
+        data[username][timestamp]["id"]         = ship_data["id"]
     return data
     
     
@@ -185,6 +187,38 @@ def generateUserDBJson():
     with open(base_path + "/replayDatabase.json", "w") as outfile:
         json.dump(replayData, outfile)       #Writes Json Object to disk
     return data
+    
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function'
+    class K(object):
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0  
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
+    
+    
+def dataCompare(item1, item2):
+    date_format = "%d.%m.%Y %H:%M:%S"
+    a = datetime.strptime(item1, date_format)
+    b = datetime.strptime(item2, date_format)
+    
+    if a < b:
+        return -1
+    elif a > b:
+        return 1
+    else:
+        return 0
         
 def detectCurrentGame():
     global default_path, userData
@@ -206,16 +240,16 @@ def detectCurrentGame():
             
             for ship_data in jsonData["vehicles"]:
                 shipId =    str(ship_data["shipId"])
-                relation =  str(ship_data["relation"])
                 username =  str(ship_data["name"])
-                userId =    str(ship_data["id"])
                 
                 if(username in userData):
                     met_num = len(userData[username])
-                    sorted =  OrderedDict(userData[username])
-                    last_met_time = list(sorted.keys())[-1]
-                    
+                    sort =  OrderedDict(userData[username])
+                    last_met_time = list(sort.keys()) #[-1]
+                    print(last_met_time)
+                    last_met_time = sorted(last_met_time, key=cmp_to_key(dataCompare))[-1]
                     date_format = "%d.%m.%Y %H:%M:%S"
+                    
                     a = datetime.strptime(last_met_time, date_format)
                     
                     b = datetime.today()
